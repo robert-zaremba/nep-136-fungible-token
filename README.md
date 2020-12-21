@@ -1,0 +1,1 @@
+# nep-xx-fungible-token
