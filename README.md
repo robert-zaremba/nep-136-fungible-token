@@ -1,4 +1,4 @@
-# NEP Fungible Token with transfer call
+# NEP Initeractive Fungible Token
 
 
 We present a new fungible token standard for [NEAR Protocol](https://near.org) which is designed to be interactive (transfers can call other contracts) and simplified and friendly in asychronous environment like NEAR native runtime.
