@@ -4,6 +4,7 @@
 We present a new fungible token standard for [NEAR Protocol](https://near.org) which is designed to be interactive (transfers can call other contracts) and simplified and friendly in asychronous environment like NEAR native runtime.
 
 * &#x1F449; &nbsp;  **[Smart contract interface](./src/interface.rs)**.
+* [NEP discussion](https://github.com/near/NEPs/issues/136).
 
 ## Context
 
