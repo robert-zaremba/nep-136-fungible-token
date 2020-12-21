@@ -55,11 +55,5 @@ pub trait TransferCallRecipient {
 ///     being transferred.
 /// `from` is an address of a previous holder of the tokens being sent
 pub trait TransferCallRecipient {
-    fn on_ft_receive(
-        &mut self,
-        token: AccountId,
-        from: AccountId,
-        amount: U128,
-        msg: String,
-    ) -> bool;
+    fn on_ft_receive(&mut self, token: AccountId, from: AccountId, amount: U128, msg: String);
 }

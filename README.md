@@ -25,10 +25,6 @@ There are few articles analyzing ERC-20 flaws (and NEP-21): [What’s Wrong With
 
 And the NEP-110 discussion: https://github.com/near/NEPs/issues/110 addressing same issues in a bit different way.
 
-### Proses of NEP-21 and ERC-20
-
-The pay to smart-contract flow (`approve` + `tranferFrom`), even though it's not very user friendly and prone for wrong allowance, it's very simple. It moves a complexity of handling token-recipient interaction from the contract implementation to the recipient. This makes the contract design simpler and more secure in domains where reentrancy attack is possible.
-
 
 ### Related work
 
@@ -46,6 +42,7 @@ We propose a new token standard to solve issues above. The design goals:
 3. simplify interaction with other smart-contracts
 4. simplify flow in NEP-122
 5. remove frictions related to different decimals
+6. enable smart contract composability through token transfers
 
 
 Our work is mostly influenced by the aforementioned [ERC-223](https://github.com/Dexaran/ERC223-token-standard/blob/development/README.md) and [NEP-122: Allowance-free vault-based token standard](https://github.com/near/NEPs/issues/122).
@@ -90,7 +87,7 @@ You can check the NEP-110 `handle_token_received` [implementation](https://githu
 
 ### Metadata
 
-NEP-110 stores metadata on chain, and sets the final structure for the metadata:
+NEP-110 stores metadata on chain, and defines a structure for the metadata:
 
 ```rust
 struct Metadata {
@@ -131,7 +128,13 @@ We improve the NEP-21 design by:
 + all points mentioned above
 + greatly simplifying implementation
 + reducing the storage size (no need to store allowances)
-+ making the transfer interactive: being able to notify the recipient smart contract for the purchase / transfer.
++ making the transfer interactive: being able to notify the recipient smart contract for the purchase / transfer
++ enabling smart contract composability through token transfers (NEP-21 smart-contract can't react on a token transfer).
+
+#### Advantages of NEP-21
+
+The pay to smart-contract flow (`approve` + `tranferFrom`), even though it's not very user friendly and prone for wrong allowance, it's very simple. It moves a complexity of handling token-recipient interaction from the contract implementation to the recipient. This makes the contract design simpler and more secure in domains where reentrancy attack is possible.
+
 
 
 ## Token interface
@@ -168,13 +171,7 @@ pub trait TransferCallRecipient {
 }
 
 pub trait TransferCallRecipient {
-    fn on_ft_receive(
-        &mut self,
-        token: AccountId,
-        from: AccountId,
-        amount: U128,
-        msg: String,
-    ) -> bool;
+    fn on_ft_receive(&mut self, token: AccountId, from: AccountId, amount: U128, msg: String);
 }
 ```
 
