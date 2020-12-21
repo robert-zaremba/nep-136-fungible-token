@@ -3,6 +3,8 @@
 
 We present a new fungible token standard for [NEAR Protocol](https://near.org) which is designed to be interactive (transfers can call other contracts) and simplified and friendly in asychronous environment like NEAR native runtime.
 
+**[Smart contract interface](./src/interface.rs)**.
+
 ## Context
 
 This NEP is based on authors work on [NEARswap](https://github.com/near-clp/smart-contracts#our-protocols) smart contract, originating in July 2020. The NEARswap implemented a first version of this proposal in a form of multi token standard.
@@ -25,7 +27,6 @@ Read more at https://ihodl.com/analytics/2018-10-04/whats-wrong-erc-20-](https:/
 
 ### Proses of NEP-21 and ERC-20
 
-Read more at https://ihodl.com/analytics/2018-10-04/whats-wrong-erc-20-token/
 
 
 
@@ -106,6 +107,47 @@ struct Metadata {
 
 ## Token interface
 
+
+Please look at the **[source code](./src/interface.rs)** for more details and comments.
+
+
+```rust
+struct Metadata {
+    name: String,       // token name
+    symbol: String,     // token symbol
+    reference: String,  // URL to additional resources about the token.
+    granularity: uint8, // the smallest part of the token that’s (denominated in e18) not divisible
+    decimals: uint8,    // MUST be 18,
+}
+
+pub trait TransferCallRecipient {
+    fn metadata() -> Metadata;
+    fn total_supply(&self) -> U128;
+    fn balance_of(&self, token: AccountId, holder: AccountId) -> U128;
+
+    #[payable]
+    fn transfer(&mut self, recipient: AccountId, amount: U128, msg: String, memo: String) -> bool;
+
+    #[payable]
+    fn transfer_call(
+        &mut self,
+        recipient: AccountId,
+        amount: U128,
+        msg: String,
+        memo: String,
+    ) -> bool;
+}
+
+pub trait TransferCallRecipient {
+    fn on_ft_receive(
+        &mut self,
+        token: AccountId,
+        from: AccountId,
+        amount: U128,
+        msg: String,
+    ) -> bool;
+}
+```
 
 ## Further work
 
