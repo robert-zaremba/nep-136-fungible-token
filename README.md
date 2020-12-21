@@ -3,7 +3,7 @@
 
 We present a new fungible token standard for [NEAR Protocol](https://near.org) which is designed to be interactive (transfers can call other contracts) and simplified and friendly in asychronous environment like NEAR native runtime.
 
-**[Smart contract interface](./src/interface.rs)**.
+* &#x1F449; &nbsp;  **[Smart contract interface](./src/interface.rs)**.
 
 ## Context
 
@@ -20,14 +20,13 @@ It's an adaptation of [ERC-20](https://eips.ethereum.org/EIPS/eip-20) token stan
 5. Avoid problems mentioned in the previous point, all transfers should be done through `approve` (allowance creation) and `transferFrom`, which is less intuitive and makes UX more complex: not only we need to create and keep track of right allowance (with all edge cases: user creates allowance, but token is not calling `transferFrom` and makes user to create another allowance).
 6. Fees calculation. With `approve` + `transferFrom`, the business provider has to make an additional transaction (transferFrom) and calculate it in the operation cost.
 
-There are few articles analyzing ERC-20 flaws (and NEP-21): [What’s Wrong With ERC-20 Token?
+There are few articles analyzing ERC-20 flaws (and NEP-21): [What’s Wrong With ERC-20 Token?](https://ihodl.com/analytics/2018-10-04/whats-wrong-erc-20-token/), [Critical problems of ERC20 token standard](https://medium.com/@dexaran820/erc20-token-standard-critical-problems-3c10fd48657b).
 
-Read more at https://ihodl.com/analytics/2018-10-04/whats-wrong-erc-20-](https://ihodl.com/analytics/2018-10-04/whats-wrong-erc-20-token/), [Critical problems of ERC20 token standard](https://medium.com/@dexaran820/erc20-token-standard-critical-problems-3c10fd48657b),
-
+And the NEP-110 discussion: https://github.com/near/NEPs/issues/110 addressing same issues in a bit different way.
 
 ### Proses of NEP-21 and ERC-20
 
-
+The pay to smart-contract flow (`approve` + `tranferFrom`), even though it's not very user friendly and prone for wrong allowance, it's very simple. It moves a complexity of handling token-recipient interaction from the contract implementation to the recipient. This makes the contract design simpler and more secure in domains where reentrancy attack is possible.
 
 
 ### Related work
@@ -38,16 +37,17 @@ Read more at https://ihodl.com/analytics/2018-10-04/whats-wrong-erc-20-](https:/
 + [ERC-223](https://github.com/Dexaran/ERC223-token-standard/blob/development/README.md)
 + [ERC-777](https://github.com/ethereum/EIPs/issues/777)
 
-## Interactive token with transfer calls
+## Token design
 
 We propose a new token standard to solve issues above. The design goals:
 1. not trading off simplicity - the contract must be easy to implement and use
 2. completely remove allowance: removes UX flaws and optimize contract storage space
 3. simplify interaction with other smart-contracts
-4. remove frictions related to different decimals
+4. simplify flow in NEP-122
+5. remove frictions related to different decimals
 
 
-Our work is mostly influenced by the aforementioned [ERC-223](https://github.com/Dexaran/ERC223-token-standard/blob/development/README.md) and [Allowance-free vault-based token standard](https://github.com/near/NEPs/issues/122) - a **NEP-122** proposed by NEAR core.
+Our work is mostly influenced by the aforementioned [ERC-223](https://github.com/Dexaran/ERC223-token-standard/blob/development/README.md) and [NEP-122: Allowance-free vault-based token standard](https://github.com/near/NEPs/issues/122).
 
 ### Transfer reference (memo)
 
@@ -80,6 +80,13 @@ An attack vector is to call back the originating smart-contract (`B->A`) in the 
 
 In asynchronous environment like NEAR, an external smart contract call execution is happening in a new, isolated routine once the originating call finished and all state changes have been committed.  This eliminates the reentrancy - any call from external smart contract back to the originating smart contract (`A->B->A`) is isolated from the originating smart-contract. The attack vector is limited and essentially it's "almost" reduced to other attacks happening in separate transaction. Almost - because a user still need to manage the callbacks.
 
+### Handling not accepted calls
+
+If a recipient of `transfer_call` fails, we would like to preserve the tokens from being lost. For that, a token MAY implement pattern developed by NEP-110:  to  sending tokens through `transfer_call`, append a `handle_token_received` callback promise to the `on_ft_receive` call. This callback will check if the previous one was successful, and if not, it will rollback the transfer.
+
+You can check the NEP-110 `handle_token_received` [implementation](https://github.com/miohtama/advanced-fungible/blob/master/contract/token/src/token.rs#L351).
+
+
 ### Metadata
 
 NEP-110 stores metadata on chain, and sets the final structure for the metadata:
@@ -104,6 +111,27 @@ struct Metadata {
   decimals = 18,
 }
 ```
+
+
+## Comparative analysis
+
+We improve the token NEP-110 design by:
+* handling compliance issues
+* solving UX issues related to decimals
+* clear support for smart-contract and basic transfers
+
+
+We improve the NEP-122 design by:
+* simplifying the flow (no need to create safe locks) and less callbacks
+* handling compliance issues
+* solving UX issues related to decimals
+
+We improve the NEP-21 design by:
++ all points mentioned above
++ greatly simplifying implementation
++ reducing the storage size (no need to store allowances)
++ making the transfer interactive: being able to notify the recipient smart contract for the purchase / transfer.
+
 
 ## Token interface
 
