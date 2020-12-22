@@ -80,9 +80,13 @@ In asynchronous environment like NEAR, an external smart contract call execution
 
 ### Handling not accepted calls
 
-If a recipient of `transfer_call` fails, we would like to preserve the tokens from being lost. For that, a token MAY implement pattern developed by NEP-110:  to  sending tokens through `transfer_call`, append a `handle_token_received` callback promise to the `on_ft_receive` call. This callback will check if the previous one was successful, and if not, it will rollback the transfer.
+If a recipient of `transfer_call` fails, we would like to preserve the tokens from being lost. For that, a token MAY implement pattern developed by NEP-110: when  sending tokens through `transfer_call`, append a `finalize_token_call` callback promise to the `on_ft_receive` call. This callback will check if the previous one was successful, and if not, it will rollback the transfer.
 
-You can check the NEP-110 `handle_token_received` [implementation](https://github.com/miohtama/advanced-fungible/blob/master/contract/token/src/token.rs#L351).
+You can check the NEP-110 `handle_token_received` [implementation](https://github.com/miohtama/advanced-fungible/blob/master/contract/token/src/token.rs#L351) (the NEP-110 reference implementation uses `handle_token_received` for function name instead of `finalize_token_call`). This function shouldn't be called externally.
+
+We propose to standarize the final call back:
++ Use `finalize_token_call` as a function name
++ When scheduling a call to `recipient.on_ft_receive`, don't pass all NEAR for fees. Reserve some NEAR for `finalize_token_call` to make sure we will be able to handle **both** scenarios: when `on_ft_receive` succeeds and when it fails.
 
 
 ### Metadata
