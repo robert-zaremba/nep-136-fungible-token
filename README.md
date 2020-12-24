@@ -47,6 +47,21 @@ We propose a new token standard to solve issues above. The design goals:
 
 Our work is mostly influenced by the aforementioned [ERC-223](https://github.com/Dexaran/ERC223-token-standard/blob/development/README.md) and [NEP-122: Allowance-free vault-based token standard](https://github.com/near/NEPs/issues/122).
 
+### Account registration
+
+To simplify the interface we and make sure we send funds only to accounts which agree to receive token of a given type we introduce _account registration_ concept. NEP-21 transfer (and approval) functions require payment to cover the potential storage fees. Each method which calls a `#payment` method must be marked with `#payment`. This complicates the tools design - they will need to ask user to attach payment for every such transaction. With __account registration_, an account must firstly to opt-in to a token, and only then it can receive tokens. This gives many benefits:
+
++ protects account for receiving unwanted tokens (spamming, compliance)
++ signals that a smart-contract can handle tokens
++ removes a need for attaching payment to every `transfer` call, and every function which transitively calls `transfer`.
+
+An account, once registered, can opt-out - with that, a storage deposit will be returned, and the account will stop accepting token transfers.
+
+
+### Reactive transfers
+
+Instead of having `approve` + `transferFrom`, we propose a `transfer_call` function which transfer funds and calls external smart-contract to notify him about the transfer. This function essentially requires that a recipient must implement `TransferCallRecipient` interface described below.
+
 ### Transfer reference (memo)
 
 We add a required `memo` argument to all transfer functions. Similarly to bank transfer and payment orders, the `memo` argument allows to reference transfer to other event (on-chain or off-chain). It is a schema less, so user can use it to reference an external document, invoice, order ID, ticket ID, or other on-chain transaction. With `memo` you can set a transfer reason, often required for compliance.
@@ -65,10 +80,6 @@ ERC-20 has an optional `decimals` contract attribute, other Ethereum standards m
 + All balances MUST be a multiple of the granularity.
 + Any amount of tokens (in the internal denomination) minted, sent or burned MUST be a multiple of the granularity value.
 + Any operation that would result in a balance that’s not a multiple of the granularity value MUST be considered invalid, and the transaction MUST revert.
-
-### Reactive transfers
-
-Instead of having `approve` + `transferFrom`, we propose a `transfer_call` function which transfer funds and calls external smart-contract to notify him about the transfer. This function essentially requires that a recipient must implement `TransferCallRecipient` interface described below.
 
 
 ### Security note for `transfer_call`
@@ -161,10 +172,8 @@ pub trait TransferCallRecipient {
     fn total_supply(&self) -> U128;
     fn balance_of(&self, token: AccountId, holder: AccountId) -> U128;
 
-    #[payable]
     fn transfer(&mut self, recipient: AccountId, amount: U128, msg: String, memo: String) -> bool;
 
-    #[payable]
     fn transfer_call(
         &mut self,
         recipient: AccountId,
@@ -172,6 +181,14 @@ pub trait TransferCallRecipient {
         msg: String,
         memo: String,
     ) -> bool;
+
+    /// Registers the caller
+    #[payable]
+    fn register_account(&mut self);
+
+    /// Unregisters the caller
+    #[payable]
+    fn unregister_account(&mut self);
 }
 
 pub trait TransferCallRecipient {

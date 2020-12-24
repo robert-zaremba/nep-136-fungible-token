@@ -18,7 +18,7 @@ pub trait TransferCallRecipient {
     fn total_supply(&self) -> U128;
 
     /// Returns the token balance for `holder` account
-    fn balance_of(&self, token: AccountId, holder: AccountId) -> U128;
+    fn balance_of(&self, holder: AccountId) -> U128;
 
     /// Transfer `amount` of tokens from the predecessor account to a `recipient` account.
     /// If recipient is a smart-contract, then `transfer_call` should be used instead.
@@ -27,8 +27,10 @@ pub trait TransferCallRecipient {
     //      instructions.
     /// `memo`: arbitrary data with no specified format used to link the transaction with an
     ///     external data. If referencing a binary data, it should use base64 serialization.
-    /// The function panics if the token doesn't refer to any registered pool or the predecessor
-    /// doesn't have sufficient amount of shares.
+    ///
+    /// ### Panics when
+    /// - the predecessor doesn't have sufficient amount of shares.
+    /// - if the predecessor is not registered (by calling `register_account`).
     #[payable]
     fn transfer(&mut self, recipient: AccountId, amount: U128, msg: String, memo: String) -> bool;
 
@@ -39,7 +41,10 @@ pub trait TransferCallRecipient {
     //      instructions.
     /// `memo`: arbitrary data with no specified format used to link the transaction with an
     ///     external event. If referencing a binary data, it should use base64 serialization.
-    /// The function panics if the predecessor doesn't have sufficient amount of shares.
+    ///
+    /// ### Panics when
+    /// - the predecessor doesn't have sufficient amount of shares.
+    /// - if the predecessor is not registered (by calling `register_account`).
     #[payable]
     fn transfer_call(
         &mut self,
@@ -48,6 +53,27 @@ pub trait TransferCallRecipient {
         msg: String,
         memo: String,
     ) -> bool;
+
+    /// Registers the caller for accepting token transfers. Caller must deposit enough NEAR
+    /// to cover storage cost.
+    /// MUST not panic if caller is already registered.
+    #[payable]
+    fn register_account(&mut self);
+
+    /// Checks if caller is registered (through `register_account`).
+    fn is_account_registered(&mut self) -> bool;
+
+    /// Unregisters the caller for accepting token transfers. Caller must deposit enough NEAR
+    /// to cover storage cost.
+    /// MUST panic if caller balance != 0.
+    fn unregister_account(&mut self);
+
+    /// OPTIONAL method
+    /// burns `amount` of tokens from caller balance.
+    ///
+    /// ### Panics when
+    /// - amount > balance_of()
+    fn burn(&mut self, amount: U128);
 }
 
 /// Interface for recipient call on fungible-token transfers.
